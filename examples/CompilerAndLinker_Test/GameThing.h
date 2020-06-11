@@ -1,4 +1,4 @@
-#include <FreeRTOS_SAMD21.h> //samd21
+#include <FreeRTOS_SAMD51.h> //samd51
 
 #ifndef GAME_THING_H
 #define GAME_THING_H

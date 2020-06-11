@@ -195,7 +195,7 @@ void taskMonitor(void *pvParameters)
 void setup() 
 {
 
-  SERIAL.begin(512000);
+  SERIAL.begin(115200);
 
   vNopDelayMS(1000); // prevents usb driver crash on startup, do not omit this
   while (!SERIAL) ;  // Wait for serial terminal to open port before starting program

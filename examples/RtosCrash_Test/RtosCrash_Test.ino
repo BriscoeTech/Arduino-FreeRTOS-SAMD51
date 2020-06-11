@@ -2,8 +2,11 @@
 // FreeRtos on Samd51
 // By Scott Briscoe
 //
-// Project is a simple example of how to get FreeRtos running on a SamD51 processor
-// Project can be used as a template to build your projects off of as well
+// Project is a simple test to make sure the different rtos failure detections
+// are caught and the error led to blink properly.
+//
+// A great demo to also explore the common reasons the rtos crashes and how
+// to avoid them
 //
 //**************************************************************************
 
@@ -13,10 +16,14 @@
 // Type Defines and Constants
 //**************************************************************************
 
+// change this to cause different errors to be compiled and run
+#define ERROR_CHECKING	0	//0 for off, 1-6 to select failure mode to compile
+
+
 #define  ERROR_LED_PIN  13 //Led Pin: Typical Arduino Board
 //#define  ERROR_LED_PIN  2 //Led Pin: samd21 xplained board
 
-#define ERROR_LED_LIGHTUP_STATE  LOW // the state that makes the led light up on your board, either low or high
+#define ERROR_LED_LIGHTUP_STATE  HIGH // the state that makes the led light up on your board, either low or high
 
 // Select the serial port the project should use and communicate over
 // Some boards use SerialUSB, some use Serial
@@ -57,17 +64,70 @@ void myDelayMsUntil(TickType_t *previousWakeTime, int ms)
 static void threadA( void *pvParameters ) 
 {
   
-  SERIAL.println("Thread A: Started");
-  for(int x=0; x<100; ++x)
-  {
-    SERIAL.print("A");
-    myDelayMs(500);
-  }
-  
-  // delete ourselves.
-  // Have to call this or the system crashes when you reach the end bracket and then get scheduled.
-  SERIAL.println("Thread A: Deleting");
-  vTaskDelete( NULL );
+	SERIAL.println("Thread A: Started");
+
+	#if ERROR_CHECKING == 1
+		while(1)
+		{
+			// cause a memory leak, grabbing from ram and not stacks or heap
+			// also simulates how some libraries keep allocating more and more objects
+			// this is not caught by the rtos by default, is not a rtos malloc failure
+			// enabling the memory wrapping feature will cause library to catch this
+			// is also a good test to see if you have wrapping the optional memory feature properly
+			char *memLeak = new char[300];
+			SERIAL.print("L");
+			myDelayMs(500);
+		}
+
+	#elif ERROR_CHECKING == 2
+		while(1)
+		{
+
+			// wait a little bit before generating error
+			myDelayMs(12000);
+
+			// cause a stack overflow
+			// is just barley outside of stack range
+			// FreeRtos does not guarantee this always works
+			// massive out of range values sometimes don't flag a error, or crash at program start with no error
+			#define ARRAY_SIZE_STACK 200 //ajust to be just larger than your stack can handle
+			long sum = 0;
+			int stackBreakingArray[ARRAY_SIZE_STACK];
+			for(long x=1; x<ARRAY_SIZE_STACK-1; ++x)
+			{
+				sum = stackBreakingArray[x] + stackBreakingArray[x+1];
+			}
+			SERIAL.println(sum);
+			myDelayMs(500);
+		}
+
+	#elif ERROR_CHECKING == 3
+		// generate a failed assert, this is testing the rtos asserts work
+		// cause a rtosFatalError
+		configASSERT( 0 );
+
+	#else
+		// normal run, print out A to terminal
+		for(int x=0; x<100; ++x)
+		{
+			SERIAL.print("A");
+			myDelayMs(500);
+		}
+	#endif
+
+	//************************
+
+	#if ERROR_CHECKING == 4
+		// rtos tasks should not reach the end of their function
+		// if you reach the end they must deleting themselves
+		// this will cause a crash
+		// cause a rtosFatalError
+	#else
+		// delete ourselves.
+		// Have to call this or the system crashes when you reach the end bracket and then get scheduled.
+		SERIAL.println("Thread A: Deleting");
+		vTaskDelete( NULL );
+	#endif
 }
 
 //*****************************************************************
@@ -181,12 +241,36 @@ void setup()
   //               Use the taskMonitor thread to help gauge how much more you need
   vSetErrorLed(ERROR_LED_PIN, ERROR_LED_LIGHTUP_STATE);
 
+
   // Create the threads that will be managed by the rtos
   // Sets the stack size and priority of each task
   // Also initializes a handler pointer to each task, which are important to communicate with and retrieve info from tasks
   xTaskCreate(threadA,     "Task A",       256, NULL, tskIDLE_PRIORITY + 3, &Handle_aTask);
   xTaskCreate(threadB,     "Task B",       256, NULL, tskIDLE_PRIORITY + 2, &Handle_bTask);
   xTaskCreate(taskMonitor, "Task Monitor", 256, NULL, tskIDLE_PRIORITY + 1, &Handle_monitorTask);
+
+  #if ERROR_CHECKING == 5
+	// cause a rtos malloc fail, not enough heap
+	xTaskCreate(threadA,   "Task Fail",    9000, NULL, tskIDLE_PRIORITY + 4, &Handle_aTask);
+  #endif
+
+
+  #if ERROR_CHECKING == 6
+	  // this error is you dont have enough ram for global memory objects and the heap
+	  // this simulates program allocating alot of objects to memory at startup it cannot actually fit
+	  // this is not caught by the rtos and system crashes at startup
+	  // look at Basic_RTOS_Example2 example and the MemoryFree library to help discover these problems
+	  // could try shrinking the heap in FreeRtosConfig.h (less room for rtos objects tho)
+	  // or reduce the amount of library objects or globals being used
+	  #define ARRAY_SIZE_GLOBAL	100000
+	  long massiveArray[ARRAY_SIZE_GLOBAL];
+	  long sum;
+	  for(long x=1; x<ARRAY_SIZE_GLOBAL-1; ++x)
+	  {
+		sum = massiveArray[x] + massiveArray[x+1];
+	  }
+	  SERIAL.println(sum);
+  #endif
 
   // Start the RTOS, this function will never return and will schedule the tasks.
   vTaskStartScheduler();

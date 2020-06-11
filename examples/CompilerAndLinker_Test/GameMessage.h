@@ -1,6 +1,6 @@
 
 // include the other header files to make this class work
-#include <FreeRTOS_SAMD21.h> //samd21
+#include <FreeRTOS_SAMD51.h> //samd51
 #include "GameData.h"
 
 

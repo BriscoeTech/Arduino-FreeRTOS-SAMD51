@@ -1,6 +1,6 @@
 
 // External Libraries
-#include <FreeRTOS_SAMD21.h> //samd21
+#include <FreeRTOS_SAMD51.h> //samd51
 
 #include "GameMessage.h"
 #include "GameData.h"

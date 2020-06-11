@@ -5,9 +5,12 @@
 // Project is a simple example of how to get FreeRtos running on a SamD51 processor
 // Project can be used as a template to build your projects off of as well
 //
+// This example uses the MemoryFree library by mpflaga, to show how much ram is being used by the rtos and all global objects
+// https://github.com/mpflaga/Arduino-MemoryFree
 //**************************************************************************
 
-#include <FreeRTOS_SAMD51.h>
+#include <FreeRTOS_SAMD51.h> //samd51
+#include <MemoryFree.h>
 
 //**************************************************************************
 // Type Defines and Constants
@@ -19,9 +22,9 @@
 #define ERROR_LED_LIGHTUP_STATE  LOW // the state that makes the led light up on your board, either low or high
 
 // Select the serial port the project should use and communicate over
-// Some boards use SerialUSB, some use Serial
-//#define SERIAL          SerialUSB //Sparkfun Samd51 Boards
-#define SERIAL          Serial //Adafruit, other Samd51 Boards
+// Sombe boards use SerialUSB, some use Serial
+//#define SERIAL          SerialUSB
+#define SERIAL          Serial
 
 //**************************************************************************
 // global variables
@@ -32,8 +35,7 @@ TaskHandle_t Handle_monitorTask;
 
 //**************************************************************************
 // Can use these function for RTOS delays
-// Takes into account processor speed
-// Use these instead of delay(...) in rtos tasks
+// Takes into account procesor speed
 //**************************************************************************
 void myDelayUs(int us)
 {
@@ -58,7 +60,7 @@ static void threadA( void *pvParameters )
 {
   
   SERIAL.println("Thread A: Started");
-  for(int x=0; x<100; ++x)
+  for(int x=0; x<20; ++x)
   {
     SERIAL.print("A");
     myDelayMs(500);
@@ -87,13 +89,9 @@ static void threadB( void *pvParameters )
 }
 
 //*****************************************************************
-// Task will periodically print out useful information about the tasks running
+// Task will periodicallt print out useful information about the tasks running
 // Is a useful tool to help figure out stack sizes being used
-// Run time stats are generated from all task timing collected since startup
-// No easy way yet to clear the run time stats yet
 //*****************************************************************
-static char ptrTaskList[400]; //temporary string bufer for task stats
-
 void taskMonitor(void *pvParameters)
 {
     int x;
@@ -102,50 +100,28 @@ void taskMonitor(void *pvParameters)
     SERIAL.println("Task Monitor: Started");
 
     // run this task afew times before exiting forever
-    while(1)
+    for(x=0; x<10; ++x)
     {
-    	myDelayMs(10000); // print every 10 seconds
 
-    	SERIAL.println("****************************************************");
-    	SERIAL.print("Free Heap: ");
-    	SERIAL.print(xPortGetFreeHeapSize());
-    	SERIAL.println(" bytes");
+      SERIAL.println("");
+      SERIAL.println("******************************");
+      SERIAL.println("[Stacks Free Bytes Remaining] ");
 
-    	SERIAL.print("Min Heap: ");
-    	SERIAL.print(xPortGetMinimumEverFreeHeapSize());
-    	SERIAL.println(" bytes");
+      measurement = uxTaskGetStackHighWaterMark( Handle_aTask );
+      SERIAL.print("Thread A: ");
+      SERIAL.println(measurement);
+      
+      measurement = uxTaskGetStackHighWaterMark( Handle_bTask );
+      SERIAL.print("Thread B: ");
+      SERIAL.println(measurement);
+      
+      measurement = uxTaskGetStackHighWaterMark( Handle_monitorTask );
+      SERIAL.print("Monitor Stack: ");
+      SERIAL.println(measurement);
 
-    	SERIAL.println("****************************************************");
-    	SERIAL.println("Task            ABS             %Util");
-    	SERIAL.println("****************************************************");
+      SERIAL.println("******************************");
 
-    	vTaskGetRunTimeStats(ptrTaskList); //save stats to char array
-    	SERIAL.println(ptrTaskList); //prints out already formatted stats
-
-		SERIAL.println("****************************************************");
-		SERIAL.println("Task            State   Prio    Stack   Num     Core" );
-		SERIAL.println("****************************************************");
-
-		vTaskList(ptrTaskList); //save stats to char array
-		SERIAL.println(ptrTaskList); //prints out already formatted stats
-
-		SERIAL.println("****************************************************");
-		SERIAL.println("[Stacks Free Bytes Remaining] ");
-
-		measurement = uxTaskGetStackHighWaterMark( Handle_aTask );
-		SERIAL.print("Thread A: ");
-		SERIAL.println(measurement);
-
-		measurement = uxTaskGetStackHighWaterMark( Handle_bTask );
-		SERIAL.print("Thread B: ");
-		SERIAL.println(measurement);
-
-		measurement = uxTaskGetStackHighWaterMark( Handle_monitorTask );
-		SERIAL.print("Monitor Stack: ");
-		SERIAL.println(measurement);
-
-		SERIAL.println("****************************************************");
-
+      myDelayMs(10000); // print every 10 seconds
     }
 
     // delete ourselves.
@@ -160,12 +136,20 @@ void taskMonitor(void *pvParameters)
 
 void setup() 
 {
-
+  double percentage;
+  
   SERIAL.begin(115200);
 
   vNopDelayMS(1000); // prevents usb driver crash on startup, do not omit this
   while (!SERIAL) ;  // Wait for serial terminal to open port before starting program
 
+  SERIAL.print("Ram Remaining : (");
+  SERIAL.print( freeMemory() );
+  SERIAL.print(" / 32000) bytes  ");
+  percentage = ((double)freeMemory() / (double)32000) * 100;
+  SERIAL.print( percentage );
+  SERIAL.println("%");
+  
   SERIAL.println("");
   SERIAL.println("******************************");
   SERIAL.println("        Program start         ");
@@ -188,15 +172,17 @@ void setup()
   xTaskCreate(threadB,     "Task B",       256, NULL, tskIDLE_PRIORITY + 2, &Handle_bTask);
   xTaskCreate(taskMonitor, "Task Monitor", 256, NULL, tskIDLE_PRIORITY + 1, &Handle_monitorTask);
 
-  // Start the RTOS, this function will never return and will schedule the tasks.
-  vTaskStartScheduler();
 
-  // error scheduler failed to start
-  while(1)
-  {
-	  SERIAL.println("Scheduler Failed! \n");
-	  vNopDelayMS(1000);
-  }
+  SERIAL.print("Ram Remaining : (");
+  SERIAL.print( freeMemory() );
+  SERIAL.print(" / 32000) bytes  ");
+  percentage = ((double)freeMemory() / (double)32000) * 100;
+  SERIAL.print( percentage );
+  SERIAL.println("%");
+  
+
+  // Start the RTOS, this function will never return and will schedule the tasks.
+	vTaskStartScheduler();
 
 }
 
