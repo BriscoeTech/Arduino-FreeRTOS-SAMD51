@@ -17,7 +17,7 @@
 //**************************************************************************
 
 // change this to cause different errors to be compiled and run
-#define ERROR_CHECKING	0	//0 for off, 1-6 to select failure mode to compile
+#define ERROR_CHECKING	6	//0 for off, 1-6 to select failure mode to compile
 
 
 #define  ERROR_LED_PIN  13 //Led Pin: Typical Arduino Board
@@ -74,7 +74,7 @@ static void threadA( void *pvParameters )
 			// this is not caught by the rtos by default, is not a rtos malloc failure
 			// enabling the memory wrapping feature will cause library to catch this
 			// is also a good test to see if you have wrapping the optional memory feature properly
-			char *memLeak = new char[300];
+			char *memLeak = new char[1000];
 			SERIAL.print("L");
 			myDelayMs(500);
 		}
@@ -90,7 +90,7 @@ static void threadA( void *pvParameters )
 			// is just barley outside of stack range
 			// FreeRtos does not guarantee this always works
 			// massive out of range values sometimes don't flag a error, or crash at program start with no error
-			#define ARRAY_SIZE_STACK 200 //ajust to be just larger than your stack can handle
+			#define ARRAY_SIZE_STACK 220 //ajust to be just larger than your stack can handle
 			long sum = 0;
 			int stackBreakingArray[ARRAY_SIZE_STACK];
 			for(long x=1; x<ARRAY_SIZE_STACK-1; ++x)
@@ -223,7 +223,7 @@ void setup()
 
   SERIAL.begin(115200);
 
-  vNopDelayMS(1000); // prevents usb driver crash on startup, do not omit this
+  delay(1000); // prevents usb driver crash on startup, do not omit this
   while (!SERIAL) ;  // Wait for serial terminal to open port before starting program
 
   SERIAL.println("");
@@ -251,7 +251,7 @@ void setup()
 
   #if ERROR_CHECKING == 5
 	// cause a rtos malloc fail, not enough heap
-	xTaskCreate(threadA,   "Task Fail",    9000, NULL, tskIDLE_PRIORITY + 4, &Handle_aTask);
+	xTaskCreate(threadA,   "Task Fail",    60000, NULL, tskIDLE_PRIORITY + 4, &Handle_aTask);
   #endif
 
 
@@ -279,7 +279,7 @@ void setup()
   while(1)
   {
 	  SERIAL.println("Scheduler Failed! \n");
-	  vNopDelayMS(1000);
+	  delay(1000);
   }
 
 }
@@ -292,9 +292,8 @@ void loop()
 {
     // Optional commands, can comment/uncomment below
     SERIAL.print("."); //print out dots in terminal, we only do this when the RTOS is in the idle state
-    vNopDelayMS(100);
+    delay(100); //delay is interrupt friendly, unlike vNopDelayMS
 }
 
 
 //*****************************************************************
-
