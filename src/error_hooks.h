@@ -20,8 +20,15 @@ extern "C"
 	// function prototypes
 	//**************************************************
 
+	// remove a linux or windows path from a file path
+	// will leave file name remaining
+	const char* removePath(const char* path);
+
 	// called on fatal error (interrupts disabled already)
 	void rtosFatalError(void);
+
+	// fatal error print out what file assert failed
+	void rtosFatalErrorSerial(unsigned long ulLine, const char *pcFileName);
 
 	// called on full heap or malloc failure
 	void vApplicationMallocFailedHook(void);
