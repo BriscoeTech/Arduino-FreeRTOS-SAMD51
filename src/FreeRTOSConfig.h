@@ -113,7 +113,7 @@ to exclude the API function. */
 // calibration factor for vNopDelayMS in error_hooks.c
 // used to set accuracy of nopDelayMS function
 // this was experimentally chosen from a samd51 processor
-#define configCAL_FACTOR (F_CPU/9000)
+#define configCAL_FACTOR (F_CPU/6000)
 
 /* Arduino framework integration */
 #if 0

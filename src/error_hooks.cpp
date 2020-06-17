@@ -7,13 +7,31 @@
 // global variables
 
 int ErrorLed_Pin     	  	= 13; //default arduino led pin
-int ErrorLed_ActiveState  	= LOW;
+int ErrorLed_ActiveState  	= HIGH;
 
-Stream *errorSerial 		= &Serial;
+Stream *errorSerial 		= NULL;
 //************************************************************************
 
-// remove a linux or windows path from a file path
-// will leave file name remaining
+
+// set the error led to use by the rtos
+void vSetErrorLed(uint8_t pin, uint8_t activeState)
+{
+	ErrorLed_Pin = pin;
+	ErrorLed_ActiveState = activeState;
+}
+
+
+// set the error serial port for debugging asserts and crashes
+void vSetErrorSerial(Stream *serial)
+{
+	errorSerial = serial;
+}
+
+
+//************************************************************************
+
+
+// remove a linux or windows path from the file name
 const char* removePath(const char* path)
 {
 	 const char* lastname = path;
@@ -47,15 +65,16 @@ void rtosFatalErrorSerial(unsigned long ulLine, const char *pcFileName)
 {
 	if(errorSerial != NULL)
 	{
-		errorSerial->println("");
-		errorSerial->println("Fatal Rtos Error");
+		errorSerial->println(F(""));
+		errorSerial->println(F("Fatal Rtos Error"));
 
-		errorSerial->print("File: ");
+		errorSerial->print(F("File: "));
 		errorSerial->println(pcFileName);
 
-		errorSerial->print("Line: ");
+		errorSerial->print(F("Line: "));
 		errorSerial->println(ulLine);
 
+		// allow serial port to flush
 		delay(100);
 	}
 
@@ -67,35 +86,43 @@ void rtosFatalErrorSerial(unsigned long ulLine, const char *pcFileName)
 void vApplicationMallocFailedHook(void) 
 {
 
-  //Serial.println("Malloc Failed");
+	if(errorSerial != NULL)
+	{
+		errorSerial->println(F(""));
+		errorSerial->println(F("Malloc Failed"));
+
+		// allow serial port to flush
+		delay(100);
+	}
   
-  while (1)
-  {
-    errorBlink(1);
-  }
+	while (1)
+	{
+		errorBlink(1);
+	}
 }
 
 // called on full stack
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {
 
-  //Serial.print("Stack Overflow: ");
-  //Serial.println(pcTaskName);
-  
-  while (1)
-  {
-    errorBlink(2);
-  }
+	if(errorSerial != NULL)
+	{
+		errorSerial->println(F(""));
+		errorSerial->print(F("Stack Overflow: "));
+		errorSerial->println(pcTaskName);
+
+		// allow serial port to flush
+		delay(100);
+	}
+
+	while (1)
+	{
+		errorBlink(2);
+	}
 }
 
 //************************************************************************
 
-// set the error led to use by the rtos
-void vSetErrorLed(uint8_t pin, uint8_t activeState)
-{
-	ErrorLed_Pin = pin;
-	ErrorLed_ActiveState = activeState;
-}
 
 // blink an error code out the default led when the rtos has crashed
 void errorBlink(int errorNumber)

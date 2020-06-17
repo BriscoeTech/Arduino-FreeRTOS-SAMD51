@@ -17,7 +17,7 @@
 //**************************************************************************
 
 // change this to cause different errors to be compiled and run
-#define ERROR_CHECKING	4	//0 for off, 1-6 to select failure mode to compile
+#define ERROR_CHECKING	2	//0 for off, 1-6 to select failure mode to compile
 
 
 #define  ERROR_LED_PIN  13 //Led Pin: Typical Arduino Board
@@ -57,6 +57,32 @@ void myDelayMsUntil(TickType_t *previousWakeTime, int ms)
   vTaskDelayUntil( previousWakeTime, (ms * 1000) / portTICK_PERIOD_US );  
 }
 
+
+#if ERROR_CHECKING == 2
+void endlessRecursion(int l)
+{
+	int a[l];
+	long sum = 0;
+
+	for(int x=0; x<l; ++x)
+	{
+		sum += a[x];
+	}
+
+	SERIAL.print("Level ");
+	SERIAL.print(l);
+	SERIAL.print(" ");
+	SERIAL.println(sum);
+
+	myDelayMs(500);
+
+	endlessRecursion(l + 1);
+	return;
+}
+#endif
+
+
+
 //*****************************************************************
 // Create a thread that prints out A to the screen every two seconds
 // this task will delete its self after printing out afew messages
@@ -74,32 +100,15 @@ static void threadA( void *pvParameters )
 			// this is not caught by the rtos by default, is not a rtos malloc failure
 			// enabling the memory wrapping feature will cause library to catch this
 			// is also a good test to see if you have wrapping the optional memory feature properly
-			char *memLeak = new char[1000];
+			char *memLeak = new char[5000];
 			SERIAL.print("L");
 			myDelayMs(500);
 		}
 
 	#elif ERROR_CHECKING == 2
-		while(1)
-		{
-
-			// wait a little bit before generating error
-			myDelayMs(12000);
-
-			// cause a stack overflow
-			// is just barley outside of stack range
-			// FreeRtos does not guarantee this always works
-			// massive out of range values sometimes don't flag a error, or crash at program start with no error
-			#define ARRAY_SIZE_STACK 220 //ajust to be just larger than your stack can handle
-			long sum = 0;
-			int stackBreakingArray[ARRAY_SIZE_STACK];
-			for(long x=1; x<ARRAY_SIZE_STACK-1; ++x)
-			{
-				sum = stackBreakingArray[x] + stackBreakingArray[x+1];
-			}
-			SERIAL.println(sum);
-			myDelayMs(500);
-		}
+		// cause a stack overflow
+		// call a endless recursive function
+		endlessRecursion(1);
 
 	#elif ERROR_CHECKING == 3
 		// generate a failed assert, this is testing the rtos asserts work
@@ -241,6 +250,9 @@ void setup()
   //               Use the taskMonitor thread to help gauge how much more you need
   vSetErrorLed(ERROR_LED_PIN, ERROR_LED_LIGHTUP_STATE);
 
+  // set the serial port rtos failures and errors are printed to
+  // if not set, these error messages are skipped
+  vSetErrorSerial(&SERIAL);
 
   // Create the threads that will be managed by the rtos
   // Sets the stack size and priority of each task

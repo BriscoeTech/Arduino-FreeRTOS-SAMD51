@@ -20,6 +20,13 @@ extern "C"
 	// function prototypes
 	//**************************************************
 
+	// set the error led to use by the rtos
+	void vSetErrorLed(uint8_t pin, uint8_t activeState);
+
+	// set the error serial port for debugging asserts and crashes
+	void vSetErrorSerial(Stream *serial);
+
+
 	// remove a linux or windows path from a file path
 	// will leave file name remaining
 	const char* removePath(const char* path);
@@ -37,8 +44,6 @@ extern "C"
 	void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName );
 
 
-	// set the error led to use by the rtos
-	void vSetErrorLed(uint8_t pin, uint8_t activeState);
 
 	// blink an error code out the default led when the rtos has crashed
 	void errorBlink(int errorNumber);
