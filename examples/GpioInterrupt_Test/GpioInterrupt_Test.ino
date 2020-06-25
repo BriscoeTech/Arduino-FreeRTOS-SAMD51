@@ -70,8 +70,8 @@ static void threadA( void *pvParameters )
 // interrupt handler function
 //**************************************************************************
 
-#define ENABLE_DEBUG_OUTPUT_ISR
-BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//#define ENABLE_DEBUG_OUTPUT_ISR
+
 void Interrupt_MyHandler_IRQ()
 {
 
@@ -79,9 +79,11 @@ void Interrupt_MyHandler_IRQ()
 		SERIAL.print(F("["));
 	#endif
 
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
 	// release task to handle the radios read data
 	vTaskNotifyGiveFromISR( Handle_bTask, &xHigherPriorityTaskWoken );
-	//portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 
 	#ifdef ENABLE_DEBUG_OUTPUT_ISR
 		SERIAL.print(F("]"));

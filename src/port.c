@@ -73,7 +73,7 @@ r0p1 port. */
 #define portNVIC_SYSTICK_PRI				( ( ( uint32_t ) configKERNEL_INTERRUPT_PRIORITY ) << 24UL )
 
 /* Constants required to check the validity of an interrupt priority. */
-#define portFIRST_USER_INTERRUPT_NUMBER		( 16 )
+#define portFIRST_USER_INTERRUPT_NUMBER		( 64 ) // Arduino framework integration
 #define portNVIC_IP_REGISTERS_OFFSET_16 	( 0xE000E3F0 )
 #define portAIRCR_REG						( * ( ( volatile uint32_t * ) 0xE000ED0C ) )
 #define portMAX_8_BIT_VALUE					( ( uint8_t ) 0xff )
