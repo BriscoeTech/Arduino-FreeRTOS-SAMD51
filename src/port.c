@@ -73,7 +73,7 @@ r0p1 port. */
 #define portNVIC_SYSTICK_PRI				( ( ( uint32_t ) configKERNEL_INTERRUPT_PRIORITY ) << 24UL )
 
 /* Constants required to check the validity of an interrupt priority. */
-#define portFIRST_USER_INTERRUPT_NUMBER		( 64 ) // Arduino framework integration
+#define portFIRST_USER_INTERRUPT_NUMBER		( 16 )
 #define portNVIC_IP_REGISTERS_OFFSET_16 	( 0xE000E3F0 )
 #define portAIRCR_REG						( * ( ( volatile uint32_t * ) 0xE000ED0C ) )
 #define portMAX_8_BIT_VALUE					( ( uint8_t ) 0xff )
@@ -184,7 +184,6 @@ static UBaseType_t uxCriticalNesting = 0xaaaaaaaa;
 #endif /* configASSERT_DEFINED */
 
 /*-----------------------------------------------------------*/
-
 
 /*
  * See header file for description.
@@ -306,7 +305,6 @@ BaseType_t xPortStartScheduler( void )
 	
     /* Arduino framework integration */             //<----------------------------------------------------
     rtosSysTick_Handler = &xPortSysTickHandler;
-	
 	
 	/* configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to 0.
 	See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
@@ -526,11 +524,6 @@ void xPortSysTickHandler( void )
 			/* A context switch is required.  Context switching is performed in
 			the PendSV interrupt.  Pend the PendSV interrupt. */
 			portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
-			
-			
-			
-			
-			
 		}
 	}
 	portENABLE_INTERRUPTS();
@@ -727,7 +720,6 @@ __attribute__(( weak )) void vPortSetupTimerInterrupt( void )
 	portNVIC_SYSTICK_LOAD_REG = ( configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ ) - 1UL;
 	portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK_BIT | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT );
 }
-
 /*-----------------------------------------------------------*/
 
 /* This is a naked function. */
@@ -784,7 +776,11 @@ static void vPortEnableVFP( void )
 			The following links provide detailed information:
 			http://www.freertos.org/RTOS-Cortex-M3-M4.html
 			http://www.freertos.org/FAQHelp.html */
-			configASSERT( ucCurrentPriority >= ucMaxSysCallPriority );
+
+			// "Arduino framework integration"
+			// use this to help debug the interrupts priority thats causing the issue in rtos
+			configPrintASSERT( ucCurrentPriority >= ucMaxSysCallPriority, ucCurrentPriority, ">=", ucMaxSysCallPriority);
+			//configASSERT( ucCurrentPriority >= ucMaxSysCallPriority );
 		}
 
 		/* Priority grouping:  The interrupt controller (NVIC) allows the bits
